@@ -48,14 +48,15 @@ const (
 )
 
 type klusterletController struct {
-	patcher                      patcher.Patcher[*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus]
-	klusterletLister             operatorlister.KlusterletLister
-	kubeClient                   kubernetes.Interface
-	kubeVersion                  *version.Version
-	operatorNamespace            string
-	skipHubSecretPlaceholder     bool
-	cache                        resourceapply.ResourceCache
-	managedClusterClientsBuilder managedClusterClientsBuilderInterface
+	patcher                          patcher.Patcher[*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus]
+	klusterletLister                 operatorlister.KlusterletLister
+	kubeClient                       kubernetes.Interface
+	kubeVersion                      *version.Version
+	operatorNamespace                string
+	authenticationConfigMapNamespace string
+	skipHubSecretPlaceholder         bool
+	cache                            resourceapply.ResourceCache
+	managedClusterClientsBuilder     managedClusterClientsBuilderInterface
 }
 
 type klusterletReconcile interface {
@@ -81,18 +82,20 @@ func NewKlusterletController(
 	appliedManifestWorkClient workv1client.AppliedManifestWorkInterface,
 	kubeVersion *version.Version,
 	operatorNamespace string,
+	authenticationConfigMapNamespace string,
 	recorder events.Recorder,
 	skipHubSecretPlaceholder bool) factory.Controller {
 	controller := &klusterletController{
 		kubeClient: kubeClient,
 		patcher: patcher.NewPatcher[
 			*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus](klusterletClient),
-		klusterletLister:             klusterletInformer.Lister(),
-		kubeVersion:                  kubeVersion,
-		operatorNamespace:            operatorNamespace,
-		skipHubSecretPlaceholder:     skipHubSecretPlaceholder,
-		cache:                        resourceapply.NewResourceCache(),
-		managedClusterClientsBuilder: newManagedClusterClientsBuilder(kubeClient, apiExtensionClient, appliedManifestWorkClient),
+		klusterletLister:                 klusterletInformer.Lister(),
+		kubeVersion:                      kubeVersion,
+		operatorNamespace:                operatorNamespace,
+		authenticationConfigMapNamespace: authenticationConfigMapNamespace,
+		skipHubSecretPlaceholder:         skipHubSecretPlaceholder,
+		cache:                            resourceapply.NewResourceCache(),
+		managedClusterClientsBuilder:     newManagedClusterClientsBuilder(kubeClient, apiExtensionClient, appliedManifestWorkClient),
 	}
 
 	return factory.New().WithSync(controller.sync).
@@ -140,6 +143,9 @@ type klusterletConfig struct {
 	WorkFeatureGates         []string
 
 	HubApiServerHostAlias *operatorapiv1.HubApiServerHostAlias
+
+	// kube-system
+	AuthenticationConfigMapNamespace string
 }
 
 func (n *klusterletController) sync(ctx context.Context, controllerContext factory.SyncContext) error {
@@ -156,18 +162,19 @@ func (n *klusterletController) sync(ctx context.Context, controllerContext facto
 	klusterlet := originalKlusterlet.DeepCopy()
 
 	config := klusterletConfig{
-		KlusterletName:            klusterlet.Name,
-		KlusterletNamespace:       helpers.KlusterletNamespace(klusterlet),
-		AgentNamespace:            helpers.AgentNamespace(klusterlet),
-		AgentID:                   string(klusterlet.UID),
-		RegistrationImage:         klusterlet.Spec.RegistrationImagePullSpec,
-		WorkImage:                 klusterlet.Spec.WorkImagePullSpec,
-		ClusterName:               klusterlet.Spec.ClusterName,
-		BootStrapKubeConfigSecret: helpers.BootstrapHubKubeConfig,
-		HubKubeConfigSecret:       helpers.HubKubeConfig,
-		ExternalServerURL:         getServersFromKlusterlet(klusterlet),
-		OperatorNamespace:         n.operatorNamespace,
-		Replica:                   helpers.DetermineReplica(ctx, n.kubeClient, klusterlet.Spec.DeployOption.Mode, n.kubeVersion),
+		KlusterletName:                   klusterlet.Name,
+		KlusterletNamespace:              helpers.KlusterletNamespace(klusterlet),
+		AgentNamespace:                   helpers.AgentNamespace(klusterlet),
+		AgentID:                          string(klusterlet.UID),
+		RegistrationImage:                klusterlet.Spec.RegistrationImagePullSpec,
+		WorkImage:                        klusterlet.Spec.WorkImagePullSpec,
+		ClusterName:                      klusterlet.Spec.ClusterName,
+		BootStrapKubeConfigSecret:        helpers.BootstrapHubKubeConfig,
+		HubKubeConfigSecret:              helpers.HubKubeConfig,
+		ExternalServerURL:                getServersFromKlusterlet(klusterlet),
+		OperatorNamespace:                n.operatorNamespace,
+		AuthenticationConfigMapNamespace: n.authenticationConfigMapNamespace,
+		Replica:                          helpers.DetermineReplica(ctx, n.kubeClient, klusterlet.Spec.DeployOption.Mode, n.kubeVersion),
 
 		ExternalManagedKubeConfigSecret:             helpers.ExternalManagedKubeConfig,
 		ExternalManagedKubeConfigRegistrationSecret: helpers.ExternalManagedKubeConfigRegistration,

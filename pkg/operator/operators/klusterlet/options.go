@@ -31,6 +31,7 @@ const defaultComponentNamespace = "open-cluster-management"
 
 type Options struct {
 	SkipPlaceholderHubSecret bool
+	CmdConfig                *controllercmd.ControllerCommandConfig
 }
 
 // RunKlusterletOperator starts a new klusterlet operator
@@ -108,6 +109,7 @@ func (o *Options) RunKlusterletOperator(ctx context.Context, controllerContext *
 		workClient.WorkV1().AppliedManifestWorks(),
 		kubeVersion,
 		operatorNamespace,
+		o.CmdConfig.AuthenticationConfigMapNamespace,
 		controllerContext.EventRecorder,
 		o.SkipPlaceholderHubSecret)
 
@@ -121,6 +123,7 @@ func (o *Options) RunKlusterletOperator(ctx context.Context, controllerContext *
 		workClient.WorkV1().AppliedManifestWorks(),
 		kubeVersion,
 		operatorNamespace,
+		o.CmdConfig.AuthenticationConfigMapNamespace,
 		controllerContext.EventRecorder)
 
 	ssarController := ssarcontroller.NewKlusterletSSARController(

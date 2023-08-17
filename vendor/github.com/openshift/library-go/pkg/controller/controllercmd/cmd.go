@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/server"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
 
@@ -47,6 +48,8 @@ type ControllerCommandConfig struct {
 	// DisableLeaderElection allows leader election to be suspended
 	DisableLeaderElection bool
 
+	AuthenticationConfigMapNamespace string
+
 	// LeaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership. This is measured against time of
 	// last observed ack.
@@ -61,6 +64,7 @@ type ControllerCommandConfig struct {
 	RetryPeriod metav1.Duration
 
 	ComponentOwnerReference *corev1.ObjectReference
+	healthChecks            []healthz.HealthChecker
 }
 
 // NewControllerConfig returns a new ControllerCommandConfig which can be used to wire up all the boiler plate of a controller
@@ -73,14 +77,20 @@ func NewControllerCommandConfig(componentName string, version version.Info, star
 
 		basicFlags: NewControllerFlags(),
 
-		DisableServing:        false,
-		DisableLeaderElection: false,
+		DisableServing:                   false,
+		DisableLeaderElection:            false,
+		AuthenticationConfigMapNamespace: metav1.NamespaceSystem,
 	}
 }
 
 // WithComponentOwnerReference overrides controller reference resolution for event recording
 func (c *ControllerCommandConfig) WithComponentOwnerReference(reference *corev1.ObjectReference) *ControllerCommandConfig {
 	c.ComponentOwnerReference = reference
+	return c
+}
+
+func (c *ControllerCommandConfig) WithHealthChecks(healthChecks ...healthz.HealthChecker) *ControllerCommandConfig {
+	c.healthChecks = append(c.healthChecks, healthChecks...)
 	return c
 }
 
@@ -298,8 +308,10 @@ func (c *ControllerCommandConfig) StartController(ctx context.Context) error {
 	builder := NewController(c.componentName, c.startFunc).
 		WithKubeConfigFile(c.basicFlags.KubeConfigFile, nil).
 		WithComponentNamespace(c.basicFlags.Namespace).
+		WithAuthenticationConfigMapNamespace(c.AuthenticationConfigMapNamespace).
 		WithLeaderElection(config.LeaderElection, c.basicFlags.Namespace, c.componentName+"-lock").
 		WithVersion(c.version).
+		WithHealthChecks(c.healthChecks...).
 		WithEventRecorderOptions(events.RecommendedClusterSingletonCorrelatorOptions()).
 		WithRestartOnChange(exitOnChangeReactorCh, startingFileContent, observedFiles...).
 		WithComponentOwnerReference(c.ComponentOwnerReference)

@@ -68,6 +68,9 @@ spec:
           {{if eq .Replica 1}}
           - "--disable-leader-election"
           {{end}}
+          {{- if not (eq .AuthenticationConfigMapNamespace "kube-system") }}
+          - --authentication-configmap-namespace={{ .AuthenticationConfigMapNamespace }}
+          {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

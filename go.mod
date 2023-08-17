@@ -8,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.7
-	github.com/openshift/api v0.0.0-20230223193310-d964c7a58d75
+	github.com/openshift/api v0.0.0-20230807132801-600991d550ac
 	github.com/openshift/build-machinery-go v0.0.0-20230306181456-d321ffa04533
 	github.com/openshift/library-go v0.0.0-20230321160537-6ac65c5454f9
 	github.com/pkg/errors v0.9.1
@@ -18,19 +18,19 @@ require (
 	github.com/valyala/fasttemplate v1.2.2
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/net v0.10.0
-	k8s.io/api v0.27.2
-	k8s.io/apiextensions-apiserver v0.27.2
-	k8s.io/apimachinery v0.27.2
-	k8s.io/apiserver v0.27.2
-	k8s.io/client-go v0.27.2
-	k8s.io/component-base v0.27.2
+	k8s.io/api v0.27.4
+	k8s.io/apiextensions-apiserver v0.27.4
+	k8s.io/apimachinery v0.27.4
+	k8s.io/apiserver v0.27.4
+	k8s.io/client-go v0.27.4
+	k8s.io/component-base v0.27.4
 	k8s.io/klog/v2 v2.90.1
-	k8s.io/kube-aggregator v0.27.2
-	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
+	k8s.io/kube-aggregator v0.27.4
+	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	open-cluster-management.io/addon-framework v0.7.1-0.20230626092851-963716af4eed
 	open-cluster-management.io/api v0.11.1-0.20230703133341-6d7212c2e941
 	sigs.k8s.io/controller-runtime v0.15.0
-	sigs.k8s.io/kube-storage-version-migrator v0.0.5
+	sigs.k8s.io/kube-storage-version-migrator v0.0.6-0.20230721195810-5c8923c5ff96
 )
 
 require (
@@ -86,7 +86,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/openshift/client-go v0.0.0-20230120202327-72f107311084 // indirect
+	github.com/openshift/client-go v0.0.0-20230503144108-75015d2347cb // indirect
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.15.1 // indirect
@@ -136,10 +136,14 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.11.1 // indirect
-	k8s.io/kms v0.27.2 // indirect
+	k8s.io/kms v0.27.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace k8s.io/apiserver => github.com/kmodules/apiserver v0.27.3-0.20230817061508-fff9d1df8be4
+
+replace github.com/openshift/library-go => github.com/kmodules/library-go v0.0.0-20230818103743-6579ad1eeb35

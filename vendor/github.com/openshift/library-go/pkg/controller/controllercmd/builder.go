@@ -20,6 +20,7 @@ import (
 	"github.com/openshift/library-go/pkg/controller/fileobserver"
 	"github.com/openshift/library-go/pkg/operator/events"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
@@ -79,10 +80,11 @@ type ControllerBuilder struct {
 	instanceIdentity   string
 	observerInterval   time.Duration
 
-	servingInfo          *configv1.HTTPServingInfo
-	authenticationConfig *operatorv1alpha1.DelegatedAuthentication
-	authorizationConfig  *operatorv1alpha1.DelegatedAuthorization
-	healthChecks         []healthz.HealthChecker
+	servingInfo                      *configv1.HTTPServingInfo
+	authenticationConfig             *operatorv1alpha1.DelegatedAuthentication
+	authenticationConfigMapNamespace string
+	authorizationConfig              *operatorv1alpha1.DelegatedAuthorization
+	healthChecks                     []healthz.HealthChecker
 
 	versionInfo *version.Info
 
@@ -99,9 +101,10 @@ type ControllerBuilder struct {
 // NewController returns a builder struct for constructing the command you want to run
 func NewController(componentName string, startFunc StartFunc) *ControllerBuilder {
 	return &ControllerBuilder{
-		startFunc:        startFunc,
-		componentName:    componentName,
-		observerInterval: defaultObserverInterval,
+		startFunc:                        startFunc,
+		componentName:                    componentName,
+		authenticationConfigMapNamespace: metav1.NamespaceSystem,
+		observerInterval:                 defaultObserverInterval,
 		nonZeroExitFn: func(args ...interface{}) {
 			klog.Warning(args...)
 			os.Exit(1)
@@ -138,6 +141,11 @@ func (b *ControllerBuilder) WithRestartOnChange(stopCh chan<- struct{}, starting
 
 func (b *ControllerBuilder) WithComponentNamespace(ns string) *ControllerBuilder {
 	b.componentNamespace = ns
+	return b
+}
+
+func (b *ControllerBuilder) WithAuthenticationConfigMapNamespace(ns string) *ControllerBuilder {
+	b.authenticationConfigMapNamespace = ns
 	return b
 }
 
@@ -269,7 +277,7 @@ func (b *ControllerBuilder) Run(ctx context.Context, config *unstructured.Unstru
 
 	var server *genericapiserver.GenericAPIServer
 	if b.servingInfo != nil {
-		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, *b.authorizationConfig, kubeConfig, kubeClient, b.leaderElection)
+		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, b.authenticationConfigMapNamespace, *b.authorizationConfig, kubeConfig, kubeClient, b.leaderElection)
 		if err != nil {
 			return err
 		}

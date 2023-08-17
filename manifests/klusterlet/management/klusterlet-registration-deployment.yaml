@@ -73,6 +73,9 @@ spec:
           {{if gt .ClientCertExpirationSeconds 0}}
           - "--client-cert-expiration-seconds={{ .ClientCertExpirationSeconds }}"
           {{end}}
+          {{- if not (eq .AuthenticationConfigMapNamespace "kube-system") }}
+          - --authentication-configmap-namespace={{ .AuthenticationConfigMapNamespace }}
+          {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

@@ -32,12 +32,13 @@ import (
 )
 
 type klusterletCleanupController struct {
-	patcher                      patcher.Patcher[*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus]
-	klusterletLister             operatorlister.KlusterletLister
-	kubeClient                   kubernetes.Interface
-	kubeVersion                  *version.Version
-	operatorNamespace            string
-	managedClusterClientsBuilder managedClusterClientsBuilderInterface
+	patcher                          patcher.Patcher[*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus]
+	klusterletLister                 operatorlister.KlusterletLister
+	kubeClient                       kubernetes.Interface
+	kubeVersion                      *version.Version
+	operatorNamespace                string
+	authenticationConfigMapNamespace string
+	managedClusterClientsBuilder     managedClusterClientsBuilderInterface
 }
 
 // NewKlusterletCleanupController construct klusterlet cleanup controller
@@ -51,15 +52,17 @@ func NewKlusterletCleanupController(
 	appliedManifestWorkClient workv1client.AppliedManifestWorkInterface,
 	kubeVersion *version.Version,
 	operatorNamespace string,
+	authenticationConfigMapNamespace string,
 	recorder events.Recorder) factory.Controller {
 	controller := &klusterletCleanupController{
 		kubeClient: kubeClient,
 		patcher: patcher.NewPatcher[
 			*operatorapiv1.Klusterlet, operatorapiv1.KlusterletSpec, operatorapiv1.KlusterletStatus](klusterletClient),
-		klusterletLister:             klusterletInformer.Lister(),
-		kubeVersion:                  kubeVersion,
-		operatorNamespace:            operatorNamespace,
-		managedClusterClientsBuilder: newManagedClusterClientsBuilder(kubeClient, apiExtensionClient, appliedManifestWorkClient),
+		klusterletLister:                 klusterletInformer.Lister(),
+		kubeVersion:                      kubeVersion,
+		operatorNamespace:                operatorNamespace,
+		authenticationConfigMapNamespace: authenticationConfigMapNamespace,
+		managedClusterClientsBuilder:     newManagedClusterClientsBuilder(kubeClient, apiExtensionClient, appliedManifestWorkClient),
 	}
 
 	return factory.New().WithSync(controller.sync).
@@ -94,17 +97,18 @@ func (n *klusterletCleanupController) sync(ctx context.Context, controllerContex
 	}
 	// Klusterlet is deleting, we remove its related resources on managed and management cluster
 	config := klusterletConfig{
-		KlusterletName:            klusterlet.Name,
-		KlusterletNamespace:       helpers.KlusterletNamespace(klusterlet),
-		AgentNamespace:            helpers.AgentNamespace(klusterlet),
-		RegistrationImage:         klusterlet.Spec.RegistrationImagePullSpec,
-		WorkImage:                 klusterlet.Spec.WorkImagePullSpec,
-		ClusterName:               klusterlet.Spec.ClusterName,
-		BootStrapKubeConfigSecret: helpers.BootstrapHubKubeConfig,
-		HubKubeConfigSecret:       helpers.HubKubeConfig,
-		ExternalServerURL:         getServersFromKlusterlet(klusterlet),
-		OperatorNamespace:         n.operatorNamespace,
-		Replica:                   helpers.DetermineReplica(ctx, n.kubeClient, klusterlet.Spec.DeployOption.Mode, n.kubeVersion),
+		KlusterletName:                   klusterlet.Name,
+		KlusterletNamespace:              helpers.KlusterletNamespace(klusterlet),
+		AgentNamespace:                   helpers.AgentNamespace(klusterlet),
+		RegistrationImage:                klusterlet.Spec.RegistrationImagePullSpec,
+		WorkImage:                        klusterlet.Spec.WorkImagePullSpec,
+		ClusterName:                      klusterlet.Spec.ClusterName,
+		BootStrapKubeConfigSecret:        helpers.BootstrapHubKubeConfig,
+		HubKubeConfigSecret:              helpers.HubKubeConfig,
+		ExternalServerURL:                getServersFromKlusterlet(klusterlet),
+		OperatorNamespace:                n.operatorNamespace,
+		AuthenticationConfigMapNamespace: n.authenticationConfigMapNamespace,
+		Replica:                          helpers.DetermineReplica(ctx, n.kubeClient, klusterlet.Spec.DeployOption.Mode, n.kubeVersion),
 
 		ExternalManagedKubeConfigSecret:             helpers.ExternalManagedKubeConfig,
 		ExternalManagedKubeConfigRegistrationSecret: helpers.ExternalManagedKubeConfigRegistration,

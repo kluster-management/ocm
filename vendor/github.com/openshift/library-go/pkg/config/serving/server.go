@@ -19,7 +19,7 @@ import (
 	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
 )
 
-func ToServerConfig(ctx context.Context, servingInfo configv1.HTTPServingInfo, authenticationConfig operatorv1alpha1.DelegatedAuthentication, authorizationConfig operatorv1alpha1.DelegatedAuthorization,
+func ToServerConfig(ctx context.Context, servingInfo configv1.HTTPServingInfo, authenticationConfig operatorv1alpha1.DelegatedAuthentication, authenticationConfigMapNamespace string, authorizationConfig operatorv1alpha1.DelegatedAuthorization,
 	kubeConfigFile string, kubeClient *kubernetes.Clientset, le *configv1.LeaderElection) (*genericapiserver.Config, error) {
 	scheme := runtime.NewScheme()
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
@@ -39,6 +39,7 @@ func ToServerConfig(ctx context.Context, servingInfo configv1.HTTPServingInfo, a
 
 	if !authenticationConfig.Disabled {
 		authenticationOptions := genericapiserveroptions.NewDelegatingAuthenticationOptions()
+		authenticationOptions.AuthenticationConfigMapNamespace = authenticationConfigMapNamespace
 		authenticationOptions.RemoteKubeConfigFile = kubeConfigFile
 		// the platform generally uses 30s for /metrics scraping, avoid API request for every other /metrics request to the component
 		authenticationOptions.CacheTTL = 35 * time.Second
